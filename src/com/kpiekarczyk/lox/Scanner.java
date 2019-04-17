@@ -35,6 +35,7 @@ class Scanner {
     private void scanToken() {
         char c = advance();
         switch (c) {
+            // Single char lexems
             case '(': addToken(LEFT_PAREN); break;
             case ')': addToken(RIGHT_PAREN); break;
             case '{': addToken(LEFT_BRACE); break;
@@ -45,10 +46,34 @@ class Scanner {
             case '+': addToken(PLUS); break;
             case ';': addToken(SEMICOLON); break;
             case '*': addToken(STAR); break;
+
+            // Sigle or two char lexems
             case '!': addToken(match('=') ? BANG_EQUAL : BANG); break;
             case '=': addToken(match('=') ? EQUAL_EQUAL : EQUAL); break;
             case '<': addToken(match('=') ? LESS_EQUAL : LESS); break;
             case '>': addToken(match('=') ? GREATER_EQUAL : GREATER_EQUAL); break;
+
+            // Ignoring comments, getting '/' as a lexem
+            case '/':
+                if (match('/')) {
+                    while (peek() != '\n' && !isAtEnd()) advance();
+                } else {
+                    addToken(SLASH);
+                }
+
+            // Ignoring whitespace
+            case ' ':
+            case '\r':
+            case '\t':
+                break;
+
+            // Ignoring new line, but increasing line count
+            case '\n':
+                line++;
+                break;
+
+            // Longer lexems
+            case '"': string(); break;
 
             default:
                 Lox.error(line, "Unexpected character.");
@@ -76,5 +101,30 @@ class Scanner {
 
         current ++;
         return true;
+    }
+
+    private char peek() {
+        if (isAtEnd()) return '\0';
+        return source.charAt(current);
+    }
+
+    private void string() {
+        while (peek() != '"' && !isAtEnd()) {
+            if (peek() == '\n') line++;
+            advance();
+        }
+
+        // Signal an unterminated string
+        if (isAtEnd()) {
+            Lox.error(line, "Unterminated string.");
+            return;
+        }
+
+        // Consume the closing "
+        advance();
+
+        // Trim the surrounding quotes
+        String value = source.substring(start + 1, current - 1);
+        addToken(STRING, value);
     }
 }
